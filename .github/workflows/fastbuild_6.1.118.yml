@@ -261,6 +261,20 @@ jobs:
             echo "检测到 SUSFS 开启，自动切换至 rksu-susfs-master 分支..."
             curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/susfs-rksu-master/kernel/setup.sh" | bash -s susfs-rksu-master
             cd ./KernelSU
+            # --- FIX: Manually create missing Makefile ---
+            echo "检测到 Makefile 缺失，正在手动创建..."
+            cat <<EOF > kernel/Makefile
+            DKSU_VERSION = 16
+            ccflags-y += -DDKSU_VERSION=\$(DKSU_VERSION)
+            KDIR := \$(KDIR)
+            MDIR := \$(realpath \$(dir \$(abspath \$(lastword \$(MAKEFILE_LIST)))))
+
+            all:
+              make -C \$(KDIR) M=\$(MDIR) modules
+
+            clean:
+              make -C \$(KDIR) M=\$(MDIR) clean
+            EOF
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/rsuntk/KernelSU/commits?sha=susfs-rksu-master&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 30000)
             else
             echo "SUSFS 未开启，使用默认 main 分支..."
